@@ -230,6 +230,9 @@ int main(int argc, char *argv[]){
         ClientInstance NewClient;
         NewClient.CreateSocketFd();
         NewClient.ConnectToServer(ip, port);
+        while(ProgramRunning){
+            
+        }
     }
     
 
