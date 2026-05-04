@@ -1,0 +1,8 @@
+#pragma once
+
+#ifndef COMMUNICATION_MODULE
+#define COMMUNICATION_MODULE
+
+
+
+#endif  /*COMMINCATION_MODULE*/

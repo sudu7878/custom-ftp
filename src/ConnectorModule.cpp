@@ -12,9 +12,11 @@
 #include <ifaddrs.h>
 #include <signal.h>
 
+#include <headers/ConnectorMoudle.hpp>
 
 
-bool RunningMode; //1 for server. 0 for client
+
+bool RunningMode;                       /*1 for server. 0 for client */
 bool EnableDebug = false;
 volatile bool ProgramRunning = true;
 
@@ -59,6 +61,10 @@ void PrintServerInfo(uint16_t port){
     printf("===========================\n\n");
 }
 
+void TerminateConnection(BaseConnectionInstance& ConnectionInstance){
+    ConnectionInstance.CloseManually();
+}
+
 class BaseConnectionInstance{
     protected:
         int sockfd;
@@ -80,6 +86,16 @@ class BaseConnectionInstance{
 
         int GetFd(){
             return sockfd;
+        }
+
+        void CloseManually(){
+            if(sockfd >= 0){
+                close(sockfd);
+                sockfd = -1;
+                if(EnableDebug){printf("The socket has been closed manually.\n");}
+            } else {
+                printf("Close Connection Error: Incorrect file descriptor or the connection is already closed.\n");
+            }
         }
 
         virtual ~BaseConnectionInstance() noexcept{
@@ -231,7 +247,7 @@ int main(int argc, char *argv[]){
         NewClient.CreateSocketFd();
         NewClient.ConnectToServer(ip, port);
         while(ProgramRunning){
-            
+
         }
     }
     
