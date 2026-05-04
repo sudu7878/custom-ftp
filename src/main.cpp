@@ -10,11 +10,17 @@
 #include <netdb.h>
 #include <cstdlib>
 #include <ifaddrs.h>
+#include <signal.h>
 
 
 
 bool RunningMode; //1 for server. 0 for client
 bool EnableDebug = false;
+volatile bool ProgramRunning = true;
+
+void HandleExit(int sig){
+    ProgramRunning = false;
+}
 
 const char* GetLANIPAddr(){
     static char ServerIPAddress[INET_ADDRSTRLEN] = {0};
@@ -79,6 +85,7 @@ class BaseConnectionInstance{
         virtual ~BaseConnectionInstance() noexcept{
             if (sockfd >= 0){
                 close(sockfd);
+                if(EnableDebug){printf("The socket is now closed.\n");}
             }
         }
 
