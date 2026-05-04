@@ -8,29 +8,48 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <cstdlib>
+#include <ifaddrs.h>
+
 
 
 bool RunningMode; //1 for server. 0 for client
+bool EnableDebug = false;
+
+const char* GetLANIPAddr(){
+    static char ServerIPAddress[INET_ADDRSTRLEN] = {0};
+    struct ifaddrs *ifaddrFirstElement, *ifaddrCursor;
+
+    if (getifaddrs(&ifaddrFirstElement) == -1){
+        perror("getifaddrs error");
+        return nullptr;
+    }
+
+    for(ifaddrCursor = ifaddrFirstElement; ifaddrCursor != NULL; ifaddrCursor = ifaddrCursor->ifa_next){
+        if(ifaddrCursor->ifa_addr == NULL){
+            continue;
+        }
+
+        if(ifaddrCursor->ifa_addr->sa_family == AF_INET){
+            struct sockaddr_in *addr = (struct sockaddr_in *)ifaddrCursor->ifa_addr;
+            inet_ntop(AF_INET, &addr->sin_addr, ServerIPAddress, sizeof(ServerIPAddress));
+
+            if(strncmp(ServerIPAddress, "127.", 4) != 0){
+                freeifaddrs(ifaddrFirstElement);
+                return ServerIPAddress;
+            }
+        } 
+    }
+
+    freeifaddrs(ifaddrFirstElement);
+    return nullptr;
+}
 
 void PrintServerInfo(uint16_t port){
-    char hostbuffer[256];
-
-    if (gethostname(hostbuffer, sizeof(hostbuffer)) < 0){
-        perror("gethostname");
-        return;
-    }
-
-    struct hostent* host_entry = gethostbyname(hostbuffer);
-    if(!host_entry){
-        perror("gethostbyname");
-        return;
-    }
-
-    char* ip = inet_ntoa(*((struct in_addr*) host_entry->h_addr));
 
     printf("\n========Server Info========\n");
     printf("Local IP: 127.0.0.1:%d\n", port);
-    printf("LAN IP: %s:%d\n", ip, port);
+    printf("LAN IP: %s:%d\n", GetLANIPAddr(), port);
     printf("===========================\n\n");
 }
 
@@ -46,10 +65,10 @@ class BaseConnectionInstance{
         bool CreateSocketFd(){
            sockfd = socket(AF_INET, SOCK_STREAM, 0);
            if(sockfd < 0){
-               perror("Socket");
+               perror("Socket creation error");
                return false;
            }
-           printf("Socket creation successful.\n");
+           if(EnableDebug){printf("Socket creation successful.\n");}
            return true;
         }
 
@@ -83,21 +102,6 @@ class ServerInstance : public BaseConnectionInstance{
             }
         }
 
-        int AcceptClient(){
-            struct sockaddr_in cli_addr{};
-            socklen_t cli_addr_len = sizeof(cli_addr);
-
-            int NewSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &cli_addr_len);
-
-            if (NewSockfd < 0){
-                perror("accept");
-                return -1;
-            }
-
-            printf("Client is now connected.\n");
-            return NewSockfd;
-        }
-
         void BindSocketToServer(){
             struct sockaddr_in serv_address{};
             serv_address.sin_family = AF_INET;
@@ -108,14 +112,26 @@ class ServerInstance : public BaseConnectionInstance{
             setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
             if (bind(sockfd, (struct sockaddr *) &serv_address, sizeof(serv_address)) < 0){
-                perror("bind");
+                perror("Binding Error");
                 return;
             }
-            
-            printf("Socket bound to 0.0.0.0 at port %d.\n", serv_port);
+            if(EnableDebug){ printf("Socket bound to 0.0.0.0 at port %d.\n", serv_port);}
         }
 
+        int AcceptClient(){
+            struct sockaddr_in cli_addr{};
+            socklen_t cli_addr_len = sizeof(cli_addr);
 
+            int NewSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &cli_addr_len);
+
+            if (NewSockfd < 0){
+                perror("Unable to accept");
+                return -1;
+            }
+
+            printf("Client is now connected.\n");
+            return NewSockfd;
+        }
         ~ServerInstance() noexcept override{}
 };
 
@@ -129,14 +145,18 @@ class ClientInstance : public BaseConnectionInstance{
             serv_address.sin_family = AF_INET;
             serv_address.sin_port = htons(port);
             serv_port = port;
-
-            if (inet_pton(AF_INET, ip, &serv_address.sin_addr) <= 0){
+           
+            int res = inet_pton(AF_INET, ip, &serv_address.sin_addr);
+            
+            if(res == 0){
+                printf("Invalid IP Address format.\n");
+            } else if (res < 0){
                 perror("inet_pton");
                 return;
-            };
+            }
 
             if (connect(sockfd, (struct sockaddr *) &serv_address, sizeof(serv_address)) < 0){
-                perror("connect");
+                perror("Connection Error");
                 return;
             }
             
@@ -154,22 +174,54 @@ int main(int argc, char *argv[]){
     if(argc < 2){
         printf("Needs arguments.\n");
         return -1;
+    } 
+
+    for(int i = 1; i < argc; i++){
+        if(strcmp(argv[i], "-dbg") == 0){
+            EnableDebug = true;
+            printf("[DEBUG MODE ON]\n");
+        }
     }
 
     if(strcmp(argv[1], "server") == 0){
         RunningMode = true;
         printf("Program running in server mode.\n");
+
     } else if(strcmp(argv[1], "client") == 0){
         RunningMode = false;
+        if(argc < 4){
+            printf("Usage: ./program client <ip> <port>\n");
+            return -1;
+        }
         printf("Program running in client mode.\n");
+
     } else {
         printf("Invalid arguments.\n");
+        return -1;
     }
-
+    
     //SERVER MODE
-
+    if(RunningMode){
+        ServerInstance NewServer;
+        NewServer.CreateSocketFd();
+        NewServer.BindSocketToServer();
+        NewServer.StartListening();
+        NewServer.AcceptClient();
+    }
+    
 
     //CLIENT MODE
+    if (!RunningMode){
+        const char* ip = argv[2];
+        uint16_t port = atoi(argv[3]);
+
+        printf("Attempting to connect server at %s:%d\n", ip, port);
+        
+        ClientInstance NewClient;
+        NewClient.CreateSocketFd();
+        NewClient.ConnectToServer(ip, port);
+    }
+    
 
     return 0;
 }
