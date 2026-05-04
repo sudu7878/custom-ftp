@@ -139,6 +139,7 @@ class ServerInstance : public BaseConnectionInstance{
             printf("Client is now connected.\n");
             return NewSockfd;
         }
+        
         ~ServerInstance() noexcept override{}
 };
 
@@ -213,7 +214,9 @@ int main(int argc, char *argv[]){
         NewServer.CreateSocketFd();
         NewServer.BindSocketToServer();
         NewServer.StartListening();
-        NewServer.AcceptClient();
+        while(ProgramRunning){
+            NewServer.AcceptClient();
+        }
     }
     
 
