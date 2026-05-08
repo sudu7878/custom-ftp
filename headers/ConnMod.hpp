@@ -3,7 +3,19 @@
 #ifndef CONNECTOR_MODULE_HPP
 #define CONNECTOR_MODULE_HPP
 
-#include <cstdint>
+
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include <sys/errno.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#include <ifaddrs.h>
 
 extern bool EnableDebug;
 extern volatile bool ProgramRunning;
@@ -13,8 +25,6 @@ void HandleExit(int sig);
 const char* GetLANIPAddr();
 
 void PrintServerInfo(uint16_t port);
-
-void TerminateConnection(BaseConnectionInstance& ConnectionInstance);
 
 class BaseConnectionInstance{
     protected:
@@ -36,7 +46,6 @@ class ServerInstance : public BaseConnectionInstance{
         void StartListening();
         void BindSocketToServer();
         int AcceptClient();
-        ~ServerInstance() noexcept override;
 };
 
 class ClientInstance : public BaseConnectionInstance{
@@ -46,5 +55,7 @@ class ClientInstance : public BaseConnectionInstance{
         void ConnectToServer(const char* ip, uint16_t port);
         int GetPort();
 };
+
+void TerminateConnection(BaseConnectionInstance& ConnectionInstance);
 
 #endif  /*CONNECTOR_MODULE_HPP*/
