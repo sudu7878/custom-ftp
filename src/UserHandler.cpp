@@ -44,14 +44,9 @@ int main(int argc, char *argv[]){
     }
     
     //SERVER MODE
-    if(RunningMode){
-        StartServer();
-    } 
-
+    if(RunningMode){StartServer();} 
     //CLIENT MODE
-    if (!RunningMode){
-        StartClient(argv[2], atoi(argv[3]));
-    }
-    
+    if (!RunningMode){StartClient(argv[2], atoi(argv[3]));}
+
     return 0;
 }

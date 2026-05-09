@@ -1,11 +1,16 @@
 /*FileName: ClientMod.cpp*/
 
 #include "ClientMod.hpp"
+#include "UserHandler.hpp"
 #include "api.hpp"
+
+#include <array>
 #include <stdio.h>
 #include <stdbool.h>
+#include <cstring>
 #include <stdint.h>
-#include "UserHandler.hpp"
+#include <sys/socket.h>
+
 
 /*CLIENT CLASS FUNCTIONS*/
 
@@ -42,7 +47,10 @@ void TerminateConnection(BaseConnectionInstance& ConnectionInstance){
     ConnectionInstance.CloseManually();
 }
 
-void StartClient(const char* ip, uint16_t port){
+std::array<char, 2048> Clientmsgbuff;
+
+
+int StartClient(const char* ip, uint16_t port){
     printf("Attempting to connect server at %s:%d\n", ip, port);
         
     ClientInstance NewClient;
@@ -50,6 +58,35 @@ void StartClient(const char* ip, uint16_t port){
     NewClient.ConnectToServer(ip, port);
 
     while(ProgramRunning){
-            
+        Clientmsgbuff.fill(0);
+        int RecvFlag = recv(NewClient.GetFd(), Clientmsgbuff.data(), Clientmsgbuff.size(), 0);
+
+        if ( RecvFlag < 0){
+            perror("Error reading buffer");
+        } else if(RecvFlag == 0){
+            printf("Server disconnected. Run the program again to reconnect.\n");
+            close(NewClient.GetFd());
+            break;
+        }
+
+        printf("Server: %s", Clientmsgbuff.data());
+
+        Clientmsgbuff.fill(0);
+
+        fgets(Clientmsgbuff.data(), Clientmsgbuff.size(), stdin);    /*get whatever shit user is typing*/
+
+        int SendFlag = send(NewClient.GetFd(), Clientmsgbuff.data(), strlen(Clientmsgbuff.data()), 0);
+        printf("You: %s", Clientmsgbuff.data());
+
+        if (SendFlag < 0){
+            perror("Error writing buffer");
+        };
+           
+        if(strcmp("/~end~/", Clientmsgbuff.data()) == 0){
+            printf("Ending connection.\n");
+            break;
+        }
     }
+    close(NewClient.GetFd());
+    return 0;
 }
