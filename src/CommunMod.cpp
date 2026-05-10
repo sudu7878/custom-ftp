@@ -33,7 +33,7 @@ void WritePacketBuffer(std::vector<uint8_t> &buff, const idk &value){
     }
 }
 
-std::vector<uint8_t> SerializedPacket(Packet &data){
+std::vector<uint8_t> SerializePacket(Packet &data){
     std::vector<uint8_t> PacketBuff;
     
     PacketBuff.push_back(data.PL_TYPE);
@@ -49,3 +49,40 @@ std::vector<uint8_t> SerializedPacket(Packet &data){
     
     return PacketBuff;
 }
+
+TemporaryPacketHeader DeserializeHeaderPacket(const std::vector<uint8_t> &hdrbuff){
+    TemporaryPacketHeader RecievedHeaderPacket;
+    size_t index = 0;
+
+    RecievedHeaderPacket.type = hdrbuff[index];
+        index += sizeof(uint8_t);
+        uint32_t Length;
+
+    memcpy(&Length, &hdrbuff[index], sizeof(uint32_t));
+    RecievedHeaderPacket.len = ntohl(Length);
+    return RecievedHeaderPacket;
+}
+
+TemporaryPacketBody DeserializeBodyPacket(const std::vector<uint8_t> &buff, TemporaryPacketHeader &hdr){
+    TemporaryPacketBody RecievedBodyPacket;
+
+    size_t index = 0;
+    
+    for(size_t i = 0; i < hdr.len; i++){
+        RecievedBodyPacket.body += (char)buff[index];
+        index++;
+    }
+
+    RecievedBodyPacket.ctl = buff[index];
+
+    return RecievedBodyPacket;
+}
+
+Packet CombinePacket(TemporaryPacketHeader &hdr, TemporaryPacketBody &body){
+   Packet CombinedPacket;
+   CombinedPacket.PL_TYPE = hdr.type;
+   CombinedPacket.PL_LEN = hdr.len;
+   CombinedPacket.PL_BODY = body.body;
+   CombinedPacket.PL_CTL = body.ctl;
+   return CombinedPacket;
+}  

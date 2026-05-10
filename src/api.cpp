@@ -83,18 +83,6 @@ int BaseConnectionInstance::GetFd(){
     return sockfd;
 }
 
-void BaseConnectionInstance::CloseManually(){
-    if(sockfd >= 0){
-        close(sockfd);
-        sockfd = -1;
-
-        if(EnableDebug){printf("The socket has been closed manually.\n");}
-
-    } else {
-        printf("Close Connection Error: Incorrect file descriptor or the connection is already closed.\n");
-    }
-}
-
 BaseConnectionInstance::~BaseConnectionInstance() noexcept{
     if (sockfd >= 0){
         close(sockfd);

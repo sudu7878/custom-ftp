@@ -33,7 +33,6 @@ class BaseConnectionInstance{
         BaseConnectionInstance();
         bool CreateSocketFd();
         int GetFd();
-        void CloseManually();
         virtual ~BaseConnectionInstance() noexcept;
 
 };

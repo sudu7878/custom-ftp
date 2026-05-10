@@ -1,21 +1,25 @@
 /*FileName: ServerMod.cpp*/
 
 #include "ServerMod.hpp"
+#include "CommunMod.hpp"
 
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string>
 #include <unistd.h>
+#include <vector>
 #include "UserHandler.hpp"
 #include "api.hpp"
+#include <iostream>
 
 
 /*SERVER CLASS FUNCTIONS*/
 
-int ListeningSocketFd = 0;
+int CommunicationSocketFd = 0;
 
 int ServerInstance::GetPort(){
     return serv_port;
@@ -65,36 +69,42 @@ int ServerInstance::AcceptClient(){
     ClientCount++;
     printf("Client is now connected. Number of clients now: %d\n", ClientCount);
 
-    ListeningSocketFd = NewSockfd;
+    CommunicationSocketFd = NewSockfd;
    
     return NewSockfd;
 }
 
-std::array<char, 2048> Servmsgbuff; /*Main message memory buffer*/
-
-
 void BroadcastServerMsg(const std::string& message){
-    std::array<char, 2048> BroadcastMsgBuff;
+    Packet BroadcastPacket;
 
-    BroadcastMsgBuff.fill(0);
+    BroadcastPacket.PL_BODY = message;
+    BroadcastPacket.PL_TYPE = MESSAGE_BROADCAST;
+    
+    std::vector<uint8_t> BroadcastBuffer = SerializePacket(BroadcastPacket);
 
-    memcpy(BroadcastMsgBuff.data(), 
-            message.data(), 
-            message.size());
-
-    int SendFlag = send(ListeningSocketFd, 
-                        BroadcastMsgBuff.data(), 
-                        strlen(BroadcastMsgBuff.data()), 
+    int SendFlag = send(CommunicationSocketFd, 
+                        BroadcastBuffer.data(), 
+                        BroadcastBuffer.size(), 
                         0);
 
     if (SendFlag < 0){
         perror("CRITICAL-Error writing server message buffer");
             if(EnableDebug){printf("[dbg] Broadcast FAIL. Server send flag: %d\n", SendFlag);}
     };
-
-    BroadcastMsgBuff.fill(0);
-
         if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
+}
+
+void StopServer(ServerInstance& server){
+    close(CommunicationSocketFd);
+            if(EnableDebug){printf("[dbg] Server listening socket closure successful.\n");}
+
+    close(server.GetFd());
+            if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
+}
+
+void LockDoor(ServerInstance& server){
+     close(server.GetFd());
+            if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
 }
 
 //SERVER LOOP
@@ -117,54 +127,29 @@ int StartServer(){
            BroadcastServerMsg("Accepted a client!\n");
                 if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 
-           Servmsgbuff.fill(0);
-           int RecvFlag = recv(ListeningSocketFd, 
-                                Servmsgbuff.data(), 
-                                Servmsgbuff.size(), 
+
+           Packet MessagePacket;
+           MessagePacket.PL_TYPE = MESSAGE;
+           MessagePacket.PL_CTL = NO_ARG;
+
+           std::getline(std::cin, MessagePacket.PL_BODY);
+           std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
+
+           int SendFlag = send(CommunicationSocketFd, 
+                                MessageBuffer.data(), 
+                                MessageBuffer.size(), 
                                 0);
 
-           if (RecvFlag < 0){
-                if(EnableDebug){printf("[dbg] Server reading failed. Recieve flag returned: %d\n", RecvFlag);}
-            perror("Error reading buffer");
-            
-           } else if (RecvFlag == 0){
-            printf("Client disconected\n");
-            ClientCount--;
-            printf("Number of clients now: %d.\n", ClientCount);
-
-           }
-
-           printf("Client: %s", Servmsgbuff.data());
-
-           Servmsgbuff.fill(0);
-
-           fgets(Servmsgbuff.data(), 
-                    Servmsgbuff.size(), 
-                    stdin);    /*get whatever shit user is typing*/
-
-           int SendFlag = send(ListeningSocketFd, 
-                                Servmsgbuff.data(), 
-                                strlen(Servmsgbuff.data()), 
-                                0);
-           printf("You: %s", Servmsgbuff.data());
+           printf("You: %s", MessagePacket.PL_BODY.c_str());
 
            if (SendFlag < 0){
-                if(EnableDebug){printf("[dbg] Server writing failed. Recieve flag returned: %d\n", SendFlag);}
-            perror("Error writing buffer");
+                if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}
+            perror("Sending packet failed");
            };
            
-           if(strcmp("/~end~/", Servmsgbuff.data()) == 0){
-                    if(EnableDebug){printf("[dbg] Server recieved a string to end connection.\n");}
-                printf("Ending connection.\n");
-                break;
-           }
         }
 
-        close(NewServer.GetFd());
-            if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
-        
-        close(ListeningSocketFd);
-            if(EnableDebug){printf("[dbg] Server listening socket closure successful.\n");}
+        StopServer(NewServer);
 
         return 0;
 }
