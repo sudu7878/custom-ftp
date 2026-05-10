@@ -43,7 +43,7 @@ void ServerInstance::BindSocketToServer(){
         perror("Binding Error");
         return;
     }
-    if(EnableDebug){ printf("Socket bound to 0.0.0.0 at port %d.\n", serv_port);}
+        if(EnableDebug){ printf("[dbg] Socket bound to 0.0.0.0 at port %d.\n", serv_port);}
 }
 
 int ClientCount = 0;
@@ -55,7 +55,10 @@ int ServerInstance::AcceptClient(){
 
     int NewSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &cli_addr_len);
 
+        if(EnableDebug){printf("[dbg] Server accepted connection. Listening socket FD: %d.\n", NewSockfd);}
+
     if (NewSockfd < 0){
+            if(EnableDebug){printf("[dbg] Server failed to accept client. Listening socket FD: %d.\n", NewSockfd);}
         perror("Unable to accept client");
         return -1;
     }
@@ -75,64 +78,93 @@ void BroadcastServerMsg(const std::string& message){
 
     BroadcastMsgBuff.fill(0);
 
-    memcpy(BroadcastMsgBuff.data(), message.data(), message.size());
+    memcpy(BroadcastMsgBuff.data(), 
+            message.data(), 
+            message.size());
 
-    int SendFlag = send(ListeningSocketFd, BroadcastMsgBuff.data(), strlen(BroadcastMsgBuff.data()), 0);
+    int SendFlag = send(ListeningSocketFd, 
+                        BroadcastMsgBuff.data(), 
+                        strlen(BroadcastMsgBuff.data()), 
+                        0);
 
     if (SendFlag < 0){
         perror("CRITICAL-Error writing server message buffer");
-        if(EnableDebug){printf("[dbg] Broadcast FAIL.\n");}
+            if(EnableDebug){printf("[dbg] Broadcast FAIL. Server send flag: %d\n", SendFlag);}
     };
 
     BroadcastMsgBuff.fill(0);
 
-    if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
+        if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 }
+
+//SERVER LOOP
 
 int StartServer(){
     ServerInstance NewServer;
         NewServer.CreateSocketFd();
+            if(EnableDebug){printf("[dbg] Server socket creation successful. Socket FD: %d\n", NewServer.GetFd());}
         NewServer.BindSocketToServer();
+            if(EnableDebug){printf("[dbg] Binding socekt to address successful.\n");}
         NewServer.StartListening();
+            if(EnableDebug){printf("[dbg] Server reached the listening state successfully.\n");}
 
         /*Main loop*/
         while(ProgramRunning){
             
            NewServer.AcceptClient();
-
+                if(EnableDebug){printf("[dbg] Server accepted a client.\n");}
+        
            BroadcastServerMsg("Accepted a client!\n");
+                if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 
            Servmsgbuff.fill(0);
-           int RecvFlag = recv(ListeningSocketFd, Servmsgbuff.data(), Servmsgbuff.size(), 0);
+           int RecvFlag = recv(ListeningSocketFd, 
+                                Servmsgbuff.data(), 
+                                Servmsgbuff.size(), 
+                                0);
 
            if (RecvFlag < 0){
+                if(EnableDebug){printf("[dbg] Server reading failed. Recieve flag returned: %d\n", RecvFlag);}
             perror("Error reading buffer");
+            
            } else if (RecvFlag == 0){
             printf("Client disconected\n");
             ClientCount--;
             printf("Number of clients now: %d.\n", ClientCount);
+
            }
 
            printf("Client: %s", Servmsgbuff.data());
 
            Servmsgbuff.fill(0);
 
-           fgets(Servmsgbuff.data(), Servmsgbuff.size(), stdin);    /*get whatever shit user is typing*/
+           fgets(Servmsgbuff.data(), 
+                    Servmsgbuff.size(), 
+                    stdin);    /*get whatever shit user is typing*/
 
-           int SendFlag = send(ListeningSocketFd, Servmsgbuff.data(), strlen(Servmsgbuff.data()), 0);
+           int SendFlag = send(ListeningSocketFd, 
+                                Servmsgbuff.data(), 
+                                strlen(Servmsgbuff.data()), 
+                                0);
            printf("You: %s", Servmsgbuff.data());
 
            if (SendFlag < 0){
+                if(EnableDebug){printf("[dbg] Server writing failed. Recieve flag returned: %d\n", SendFlag);}
             perror("Error writing buffer");
            };
            
            if(strcmp("/~end~/", Servmsgbuff.data()) == 0){
+                    if(EnableDebug){printf("[dbg] Server recieved a string to end connection.\n");}
                 printf("Ending connection.\n");
                 break;
            }
         }
+
         close(NewServer.GetFd());
+            if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
+        
         close(ListeningSocketFd);
+            if(EnableDebug){printf("[dbg] Server listening socket closure successful.\n");}
 
         return 0;
 }
