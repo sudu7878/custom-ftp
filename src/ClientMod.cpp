@@ -6,6 +6,8 @@
 #include "CommunMod.hpp"
 
 #include <array>
+#include <functional>
+#include<thread>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -63,7 +65,11 @@ int RunRecvThread(ClientInstance& client){
 
         int RecvBytes = 0;
         while (RecvBytes < RecvMsgHdrBuff.size()) {
-            int RecvFlag = recv(client.GetFd(), RecvMsgHdrBuff.data(), RecvMsgHdrBuff.size(), 0);
+            /*handling pointer arithmetic to prevent over-writing*/
+            int RecvFlag = recv(client.GetFd(), 
+                                RecvMsgHdrBuff.data() + RecvBytes,
+                                RecvMsgHdrBuff.size() - RecvBytes, 
+                                0);
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
@@ -81,23 +87,25 @@ int RunRecvThread(ClientInstance& client){
         
         size_t BytesToRecieve = HeaderPacket.len + sizeof(uint8_t);
 
-        std::vector<uint8_t> RecvMsgBodyBuff;
+        std::vector<uint8_t> RecvMsgBodyBuff(BytesToRecieve);
 
         while (RecvBytes < BytesToRecieve) {
-            int RecvFlag = recv(client.GetFd(), RecvMsgBodyBuff.data(), BytesToRecieve, 0);
+            int RecvFlag = recv(client.GetFd(), 
+                                RecvMsgBodyBuff.data() + RecvBytes, 
+                                BytesToRecieve - RecvBytes, 
+                                0);
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
                 perror("Receiving packet failed. Terminating connection.\n");
                 TerminateConnection(client);
                 return -1;
-                break;
             } else {
                 RecvBytes += RecvFlag;
             }
         }
         RecvBytes = 0;
-        BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff);
+        BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
 
         MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
 
@@ -132,6 +140,7 @@ int StartClient(const char* ip, uint16_t port){
 
     
     while(ProgramRunning){
+        std::thread RecvThread(RunRecvThread, std::ref(NewClient));
         Packet MessagePacket;
 
         MessagePacket.PL_TYPE = MESSAGE;

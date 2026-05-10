@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -15,6 +16,8 @@
 #include "UserHandler.hpp"
 #include "api.hpp"
 #include <iostream>
+
+#include <thread>
 
 
 /*SERVER CLASS FUNCTIONS*/
@@ -94,6 +97,77 @@ void BroadcastServerMsg(const std::string& message){
         if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 }
 
+int RunRecvThread(ServerInstance& server){
+    while(ProgramRunning){
+
+        Packet MessagePacket;
+
+        std::vector<uint8_t> RecvMsgHdrBuff(5);
+        TemporaryPacketHeader HeaderPacket;
+
+        int RecvBytes = 0;
+        while (RecvBytes < RecvMsgHdrBuff.size()) {
+            /*handling pointer arithmetic to prevent over-writing*/
+            int RecvFlag = recv(server.GetFd(), 
+                                RecvMsgHdrBuff.data() + RecvBytes,
+                                RecvMsgHdrBuff.size() - RecvBytes, 
+                                0);
+
+            if(RecvFlag < 0){
+                    if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
+                perror("Receiving packet failed. Terminating connection.\n");
+                break;
+            } else {
+                RecvBytes += RecvFlag;
+            }
+        }
+        
+        RecvBytes = 0; /*reset*/
+        HeaderPacket = DeserializeHeaderPacket(RecvMsgHdrBuff);
+
+        TemporaryPacketBody BodyPacket;
+        
+        size_t BytesToRecieve = HeaderPacket.len + sizeof(uint8_t);
+
+        std::vector<uint8_t> RecvMsgBodyBuff(BytesToRecieve);
+
+        while (RecvBytes < BytesToRecieve) {
+            int RecvFlag = recv(server.GetFd(), 
+                                RecvMsgBodyBuff.data() + RecvBytes, 
+                                BytesToRecieve - RecvBytes, 
+                                0);
+
+            if(RecvFlag < 0){
+                    if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
+                perror("Receiving packet failed.\n");
+                break;
+            } else {
+                RecvBytes += RecvFlag;
+            }
+        }
+        RecvBytes = 0;
+        BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
+
+        MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
+
+        if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
+            printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
+        }
+
+        switch (MessagePacket.PL_CTL) {
+            case NO_ARG:
+                break;
+            case END_CONNECTION:
+                printf("[ACTION] CLIENT LEFT.\n");
+                break;
+        }
+        
+        printf("Client: %s", MessagePacket.PL_BODY.data());
+        
+    }   
+    return 0;
+}
+
 void StopServer(ServerInstance& server){
     close(CommunicationSocketFd);
             if(EnableDebug){printf("[dbg] Server listening socket closure successful.\n");}
@@ -119,6 +193,7 @@ int StartServer(){
             if(EnableDebug){printf("[dbg] Server reached the listening state successfully.\n");}
 
         /*Main loop*/
+        std::thread RecvThread(RunRecvThread, std::ref(NewServer));
         while(ProgramRunning){
             
            NewServer.AcceptClient();

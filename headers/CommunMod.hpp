@@ -71,8 +71,8 @@ void WritePacketBuffer(std::vector<uint8_t>& buff, const idk& value);
 
 std::vector<uint8_t> SerializePacket(Packet &data);   
 
-TemporaryPacketHeader DeserializeHeaderPacket(const std::vector<uint8_t> hdrbuff);
-TemporaryPacketBody DeserializeBodyPacket(const std::vector<uint8_t>& buff);
+TemporaryPacketHeader DeserializeHeaderPacket(const std::vector<uint8_t> &hdrbuff);
+TemporaryPacketBody DeserializeBodyPacket(const std::vector<uint8_t> &buff, TemporaryPacketHeader &hdr);
 Packet CombinePacket(TemporaryPacketHeader &hdr, TemporaryPacketBody &body);
 
 #pragma pack(pop)
