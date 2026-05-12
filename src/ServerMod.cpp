@@ -101,8 +101,9 @@ void BroadcastServerMsg(const std::string& message){
 }
 
 int RunRecvThread(ServerInstance& server){
-    while(ServerConnected){
-
+        if(EnableDebug){printf("[dbg] Recieve thread for server is running. Server connected = %d\n", ServerConnected);}
+    while(ServerConnected == true){
+        if(EnableDebug){printf("[dbg] INSIDE THE RECV LOOP NOW.\n");}
         Packet MessagePacket;
 
         std::vector<uint8_t> RecvMsgHdrBuff(5);
@@ -111,10 +112,12 @@ int RunRecvThread(ServerInstance& server){
         int RecvBytes = 0;
         while (RecvBytes < RecvMsgHdrBuff.size()) {
             /*handling pointer arithmetic to prevent over-writing*/
-            int RecvFlag = recv(server.GetFd(), 
+            int RecvFlag = recv(CommunicationSocketFd, 
                                 RecvMsgHdrBuff.data() + RecvBytes,
                                 RecvMsgHdrBuff.size() - RecvBytes, 
                                 0);
+            
+            if(EnableDebug){printf("[dbg] Packet should be recieved by now.\n");}
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
@@ -127,6 +130,7 @@ int RunRecvThread(ServerInstance& server){
         
         RecvBytes = 0; /*reset*/
         HeaderPacket = DeserializeHeaderPacket(RecvMsgHdrBuff);
+        if(EnableDebug){printf("[dbg] Header Type: %d | Header Len: %u\n", HeaderPacket.type, HeaderPacket.len);}
 
         TemporaryPacketBody BodyPacket;
         
@@ -135,7 +139,7 @@ int RunRecvThread(ServerInstance& server){
         std::vector<uint8_t> RecvMsgBodyBuff(BytesToRecieve);
 
         while (RecvBytes < BytesToRecieve) {
-            int RecvFlag = recv(server.GetFd(), 
+            int RecvFlag = recv(CommunicationSocketFd, 
                                 RecvMsgBodyBuff.data() + RecvBytes, 
                                 BytesToRecieve - RecvBytes, 
                                 0);
@@ -154,7 +158,7 @@ int RunRecvThread(ServerInstance& server){
         BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
 
         MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
-
+         printf("Client: %s\n", MessagePacket.PL_BODY.data());
         if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
             printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
         }
@@ -167,7 +171,7 @@ int RunRecvThread(ServerInstance& server){
                 break;
         }
         
-        printf("Client: %s", MessagePacket.PL_BODY.data());
+       
         
     }   
     return 0;
@@ -197,19 +201,24 @@ int StartServer(){
             if(EnableDebug){printf("[dbg] Binding socekt to address successful.\n");}
         NewServer.StartListening();
             if(EnableDebug){printf("[dbg] Server reached the listening state successfully.\n");}
+        
+        NewServer.AcceptClient();
+                if(EnableDebug){printf("[dbg] Server accepted a client.\n");}
+        ServerConnected = true;
+                if(EnableDebug){printf("[dbg] Server connected = %d. The recv function should run now.\n", ServerConnected);}
 
-        /*Main loop*/
             if(EnableDebug){printf("[dbg] Starting recv thread.\n");}
         std::thread RecvThread(RunRecvThread, std::ref(NewServer));
             if(EnableDebug){printf("[dbg] Recv thread has started. Returning to main thread.\n");}
-        while(ProgramRunning){
-            
-           NewServer.AcceptClient();
-                if(EnableDebug){printf("[dbg] Server accepted a client.\n");}
-        
-           BroadcastServerMsg("Accepted a client!\n");
+
+        BroadcastServerMsg("Accepted a client!\n");
                 if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 
+
+        /*MAIN LOOP*/
+        while(ProgramRunning){
+            
+           
            Packet MessagePacket;
            MessagePacket.PL_TYPE = MESSAGE;
            MessagePacket.PL_CTL = NO_ARG;
