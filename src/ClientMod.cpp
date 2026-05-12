@@ -138,7 +138,7 @@ int RunRecvThread(ClientInstance& client){
                 break;
         }
         
-        printf("Server: %s\n", MessagePacket.PL_BODY.data());
+        printf("[SERVER]: %s\n", MessagePacket.PL_BODY.data());
         
     }   
     return 0;
@@ -180,7 +180,7 @@ int StartClient(const char* ip, uint16_t port){
         
         if(EnableDebug){printf("[dbg] Packet should be sent.\n");}        
         
-        printf("You: %s\n", MessagePacket.PL_BODY.c_str());
+        printf("[YOU]: %s\n", MessagePacket.PL_BODY.c_str());
 
         if (SendFlag < 0){
                 if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}

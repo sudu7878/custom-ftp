@@ -158,7 +158,7 @@ int RunRecvThread(ServerInstance& server){
         BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
 
         MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
-         printf("Client: %s\n", MessagePacket.PL_BODY.data());
+         printf("[CLIENT]: %s\n", MessagePacket.PL_BODY.data());
         if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
             printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
         }
@@ -236,7 +236,7 @@ int StartServer(){
             
             if(EnableDebug){printf("[dbg] Packet shud be sent.\n");}
 
-            printf("You: %s\n", MessagePacket.PL_BODY.c_str());
+            printf("[YOU]: %s\n", MessagePacket.PL_BODY.c_str());
 
             if(EnableDebug){printf("[dbg] Code reached after printf.\n");}
 
