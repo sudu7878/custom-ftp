@@ -1,11 +1,12 @@
 /*FileName: ClientMod.cpp*/
 
 #include "ClientMod.hpp"
+#include "CommunMod.hpp"
 #include "UserHandler.hpp"
 #include "api.hpp"
 #include "CommunMod.hpp"
 
-#include <array>
+
 #include <functional>
 #include<thread>
 #include <cstddef>
@@ -19,6 +20,7 @@
 #include <unistd.h>
 #include <vector>
 
+bool ClientConnected = false;
 
 /*CLIENT CLASS FUNCTIONS*/
 
@@ -42,6 +44,8 @@ void ClientInstance::ConnectToServer(const char* ip, uint16_t port){
         
         return;
     }
+
+    ClientConnected = true;
             
     printf("Connected to %s:%d.\n", ip, port);
 }
@@ -51,12 +55,13 @@ int ClientInstance::GetPort(){
 }
 
 void TerminateConnection(ClientInstance& client){
+    ClientConnected = false;
     close(client.GetFd());
         if(EnableDebug){printf("[dbg] Client connection socket closure successful.\n");}
 }
 
 int RunRecvThread(ClientInstance& client){
-    while(ProgramRunning){
+    while(ClientConnected){
 
         Packet MessagePacket;
 
@@ -74,8 +79,18 @@ int RunRecvThread(ClientInstance& client){
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
                 perror("Receiving packet failed. Terminating connection.\n");
-                break;
-            } else {
+                TerminateConnection(client);
+                ProgramRunning = false;
+                return -1;
+            } else if (RecvFlag == 0){
+                    if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
+                printf("Connection terminated!\n");
+                TerminateConnection(client);
+                ProgramRunning = false;
+                ClientConnected = false;
+            } 
+            
+            else {
                 RecvBytes += RecvFlag;
             }
         }
@@ -99,6 +114,7 @@ int RunRecvThread(ClientInstance& client){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
                 perror("Receiving packet failed. Terminating connection.\n");
                 TerminateConnection(client);
+                ClientConnected = false;
                 return -1;
             } else {
                 RecvBytes += RecvFlag;
@@ -118,10 +134,11 @@ int RunRecvThread(ClientInstance& client){
                 break;
             case END_CONNECTION:
                 TerminateConnection(client);
+                ClientConnected = false;
                 break;
         }
         
-        printf("Server: %s", MessagePacket.PL_BODY.data());
+        printf("Server: %s\n", MessagePacket.PL_BODY.data());
         
     }   
     return 0;
@@ -138,9 +155,10 @@ int StartClient(const char* ip, uint16_t port){
     NewClient.ConnectToServer(ip, port);
         if(EnableDebug){printf("[dbg] Connection successful. Socket : %d.\n", NewClient.GetFd());}
 
-    
+    std::thread RecvThread(RunRecvThread, std::ref(NewClient));
+
     while(ProgramRunning){
-        std::thread RecvThread(RunRecvThread, std::ref(NewClient));
+        
         Packet MessagePacket;
 
         MessagePacket.PL_TYPE = MESSAGE;
@@ -153,12 +171,16 @@ int StartClient(const char* ip, uint16_t port){
         }
 
         std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
+            if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}
 
         int SendFlag = send(NewClient.GetFd(), 
                         MessageBuffer.data(), 
                         MessageBuffer.size(), 
                         0);
-                            
+        
+        if(EnableDebug){printf("[dbg] Packet should be sent.\n");}        
+        
+        printf("You: %s\n", MessagePacket.PL_BODY.c_str());
 
         if (SendFlag < 0){
                 if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}

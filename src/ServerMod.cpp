@@ -3,7 +3,7 @@
 #include "ServerMod.hpp"
 #include "CommunMod.hpp"
 
-#include <array>
+
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -23,6 +23,7 @@
 /*SERVER CLASS FUNCTIONS*/
 
 int CommunicationSocketFd = 0;
+bool ServerConnected = false;
 
 int ServerInstance::GetPort(){
     return serv_port;
@@ -72,6 +73,8 @@ int ServerInstance::AcceptClient(){
     ClientCount++;
     printf("Client is now connected. Number of clients now: %d\n", ClientCount);
 
+    ServerConnected = true;
+
     CommunicationSocketFd = NewSockfd;
    
     return NewSockfd;
@@ -98,7 +101,7 @@ void BroadcastServerMsg(const std::string& message){
 }
 
 int RunRecvThread(ServerInstance& server){
-    while(ProgramRunning){
+    while(ServerConnected){
 
         Packet MessagePacket;
 
@@ -115,8 +118,8 @@ int RunRecvThread(ServerInstance& server){
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("Receiving packet failed. Terminating connection.\n");
-                break;
+                perror("Receiving packet failed");
+                return -1;
             } else {
                 RecvBytes += RecvFlag;
             }
@@ -139,8 +142,10 @@ int RunRecvThread(ServerInstance& server){
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("Receiving packet failed.\n");
+                perror("Receiving packet failed\n");
+                
                 break;
+                //TODO: Add a logic for clients leaving when RecvFlag = 0
             } else {
                 RecvBytes += RecvFlag;
             }
@@ -169,6 +174,7 @@ int RunRecvThread(ServerInstance& server){
 }
 
 void StopServer(ServerInstance& server){
+    ServerConnected = false;
     close(CommunicationSocketFd);
             if(EnableDebug){printf("[dbg] Server listening socket closure successful.\n");}
 
@@ -193,7 +199,9 @@ int StartServer(){
             if(EnableDebug){printf("[dbg] Server reached the listening state successfully.\n");}
 
         /*Main loop*/
+            if(EnableDebug){printf("[dbg] Starting recv thread.\n");}
         std::thread RecvThread(RunRecvThread, std::ref(NewServer));
+            if(EnableDebug){printf("[dbg] Recv thread has started. Returning to main thread.\n");}
         while(ProgramRunning){
             
            NewServer.AcceptClient();
@@ -202,20 +210,26 @@ int StartServer(){
            BroadcastServerMsg("Accepted a client!\n");
                 if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 
-
            Packet MessagePacket;
            MessagePacket.PL_TYPE = MESSAGE;
            MessagePacket.PL_CTL = NO_ARG;
+                if(EnableDebug){printf("[dbg] Inited the packet for next send session.\n");}
 
-           std::getline(std::cin, MessagePacket.PL_BODY);
+            std::getline(std::cin, MessagePacket.PL_BODY);
+          
            std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
+                if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}
 
            int SendFlag = send(CommunicationSocketFd, 
                                 MessageBuffer.data(), 
                                 MessageBuffer.size(), 
                                 0);
+            
+            if(EnableDebug){printf("[dbg] Packet shud be sent.\n");}
 
-           printf("You: %s", MessagePacket.PL_BODY.c_str());
+            printf("You: %s\n", MessagePacket.PL_BODY.c_str());
+
+            if(EnableDebug){printf("[dbg] Code reached after printf.\n");}
 
            if (SendFlag < 0){
                 if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}
@@ -224,6 +238,7 @@ int StartServer(){
            
         }
 
+        ServerConnected  = false;
         StopServer(NewServer);
 
         return 0;
