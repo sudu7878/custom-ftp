@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
 #include "UserHandler.hpp"
@@ -48,7 +49,7 @@ void ServerInstance::BindSocketToServer(){
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     if (bind(sockfd, (struct sockaddr *) &serv_address, sizeof(serv_address)) < 0){
-        perror("Binding Error");
+        perror("[ERROR] Binding Error");
         return;
     }
         if(EnableDebug){ printf("[dbg] Socket bound to port %d.\n", serv_port);}
@@ -67,7 +68,7 @@ int ServerInstance::AcceptClient(){
 
     if (NewSockfd < 0){
             if(EnableDebug){printf("[dbg] Server failed to accept client. Listening socket FD: %d.\n", NewSockfd);}
-        perror("Unable to accept client");
+        perror("[ERROR] Unable to accept client");
         return -1;
     }
     ClientCount++;
@@ -94,7 +95,7 @@ void BroadcastServerMsg(const std::string& message){
                         0);
 
     if (SendFlag < 0){
-        perror("CRITICAL-Error writing server message buffer");
+        perror("[CRITICAL ERROR] Could not write into server message buffer");
             if(EnableDebug){printf("[dbg] Broadcast FAIL. Server send flag: %d\n", SendFlag);}
     };
         if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
@@ -117,20 +118,20 @@ int RunRecvThread(ServerInstance& server){
                                 RecvMsgHdrBuff.size() - RecvBytes, 
                                 0);
             
-          
-
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("Receiving packet failed");
+                perror("[ERROR] Receiving packet failed");
                 return -1;
-            } else {
+            } else if(RecvFlag == 0){
+                ClientCount--;
+            } else{
                 RecvBytes += RecvFlag;
             }
         }
         
         RecvBytes = 0; /*reset*/
         HeaderPacket = DeserializeHeaderPacket(RecvMsgHdrBuff);
-        if(EnableDebug){printf("[dbg] Header Type: %d | Header Len: %u\n", HeaderPacket.type, HeaderPacket.len);}
+        //if(EnableDebug){printf("[dbg] Header Type: %d | Header Len: %u\n", HeaderPacket.type, HeaderPacket.len);}
 
         TemporaryPacketBody BodyPacket;
         
@@ -146,7 +147,7 @@ int RunRecvThread(ServerInstance& server){
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("Receiving packet failed\n");
+                perror("[ERROR] Receiving packet failed\n");
                 
                 break;
                 //TODO: Add a logic for clients leaving when RecvFlag = 0
@@ -156,6 +157,7 @@ int RunRecvThread(ServerInstance& server){
         }
         RecvBytes = 0;
         BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
+
 
         MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
          printf("[CLIENT]: %s\n", MessagePacket.PL_BODY.data());
@@ -170,20 +172,18 @@ int RunRecvThread(ServerInstance& server){
                 printf("[ACTION] CLIENT LEFT.\n");
                 break;
         }
-        
-       
-        
     }   
     return 0;
 }
 
 void StopServer(ServerInstance& server){
+    BroadcastServerMsg("Shutting down the server!\n");
     ServerConnected = false;
-    close(CommunicationSocketFd);
-            if(EnableDebug){printf("[dbg] Server listening socket closure successful.\n");}
-
+    shutdown(CommunicationSocketFd, SHUT_WR);
+        if(EnableDebug){printf("[dbg] Called shutdown()\n");}
     close(server.GetFd());
             if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
+    printf("[SERVER] Stopped the server.\n");
 }
 
 void LockDoor(ServerInstance& server){
@@ -199,18 +199,20 @@ int StartServer(){
             if(EnableDebug){printf("[dbg] Server socket creation successful. Socket FD: %d\n", NewServer.GetFd());}
         NewServer.BindSocketToServer();
             if(EnableDebug){printf("[dbg] Binding socekt to address successful.\n");}
-        NewServer.StartListening();
-            if(EnableDebug){printf("[dbg] Server reached the listening state successfully.\n");}
+       
         
-        NewServer.AcceptClient();
+        if(ClientCount < 1){
+            NewServer.StartListening();
+            if(EnableDebug){printf("[dbg] Server reached the listening state successfully.\n");}
+            NewServer.AcceptClient();
                 if(EnableDebug){printf("[dbg] Server accepted a client.\n");}
-        ServerConnected = true;
-                
+            ServerConnected = true;
+        } else {
+            printf("[SERVER] Max number of clients reached. Couldn't connect more devices.\n");
+        }
 
-            
         std::thread RecvThread(RunRecvThread, std::ref(NewServer));
-           
-
+      
         BroadcastServerMsg("Accepted a client!\n");
                 if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
 
@@ -225,6 +227,10 @@ int StartServer(){
               
 
             std::getline(std::cin, MessagePacket.PL_BODY);
+            if(MessagePacket.PL_BODY == "/~STOP~/"){
+                StopServer(NewServer);
+                if(EnableDebug){printf("Recieved string to stop the server.\n");}
+            }
           
            std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
                 if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}
@@ -238,11 +244,9 @@ int StartServer(){
 
             printf("[YOU]: %s\n", MessagePacket.PL_BODY.c_str());
 
-            
-
            if (SendFlag < 0){
                 if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}
-            perror("Sending packet failed");
+            perror("[ERROR] Sending packet failed");
            };
            
         }

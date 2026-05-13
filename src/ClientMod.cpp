@@ -35,12 +35,12 @@ void ClientInstance::ConnectToServer(const char* ip, uint16_t port){
     if(res == 0){
         printf("Invalid IP Address format.\n");
     } else if (res < 0){
-        perror("inet_pton");
+        perror("[ERROR] inet_pton");
         return;
     }
 
     if (connect(sockfd, (struct sockaddr *) &serv_address, sizeof(serv_address)) < 0){
-        perror("Connection Error");
+        perror("[ERROR] Connection Error");
         
         return;
     }
@@ -58,6 +58,12 @@ void TerminateConnection(ClientInstance& client){
     ClientConnected = false;
     close(client.GetFd());
         if(EnableDebug){printf("[dbg] Client connection socket closure successful.\n");}
+}
+
+void CloseConnection(ClientInstance& client){
+    ClientConnected = false;
+    shutdown(client.GetFd(), SHUT_RD);
+        printf("Connection closed.\n");
 }
 
 int RunRecvThread(ClientInstance& client){
@@ -78,16 +84,18 @@ int RunRecvThread(ClientInstance& client){
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("Receiving packet failed. Terminating connection.\n");
+                perror("[ERROR] Receiving packet failed");
+                printf("Terminating connection.\n");
                 TerminateConnection(client);
                 ProgramRunning = false;
                 return -1;
             } else if (RecvFlag == 0){
-                    if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
+                    if(EnableDebug){printf("[dbg] Recieve flag returned %d. Terminating connection.\n", RecvFlag);}
                 printf("Connection terminated!\n");
                 TerminateConnection(client);
                 ProgramRunning = false;
                 ClientConnected = false;
+                break;
             } 
             
             else {
@@ -112,11 +120,17 @@ int RunRecvThread(ClientInstance& client){
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("Receiving packet failed. Terminating connection.\n");
+                perror("[ERROR] Receiving packet failed");
+                printf("Terminating connection. Recv fd: %d\n", RecvFlag);
                 TerminateConnection(client);
                 ClientConnected = false;
                 return -1;
-            } else {
+            } else if(RecvFlag == 0){
+                    if(EnableDebug){printf("Recieved command to close the connection.\n");}
+                CloseConnection(client);
+                TerminateConnection(client);
+                break;
+            }else{
                 RecvBytes += RecvFlag;
             }
         }
@@ -168,10 +182,15 @@ int StartClient(const char* ip, uint16_t port){
 
         if(MessagePacket.PL_BODY.empty()){
             continue;
+        } else if(MessagePacket.PL_BODY == "/~end~/"){
+                if(EnableDebug){printf("Recieved string to close connection.\n");}
+            printf("ENDING CONNECTION!\n");
+            CloseConnection(NewClient);
+            break;
         }
 
         std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
-            if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}
+            //if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}
 
         int SendFlag = send(NewClient.GetFd(), 
                         MessageBuffer.data(), 
@@ -184,7 +203,8 @@ int StartClient(const char* ip, uint16_t port){
 
         if (SendFlag < 0){
                 if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}
-            perror("Sending packet failed. Terminating connection.\n");
+            perror("[ERROR] Packet send error");
+            printf("Sending packet failed. Terminating the cinnection\n");
             break;
         };
            
