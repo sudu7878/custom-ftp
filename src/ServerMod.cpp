@@ -51,7 +51,7 @@ void ServerInstance::BindSocketToServer(){
         perror("Binding Error");
         return;
     }
-        if(EnableDebug){ printf("[dbg] Socket bound to 0.0.0.0 at port %d.\n", serv_port);}
+        if(EnableDebug){ printf("[dbg] Socket bound to port %d.\n", serv_port);}
 }
 
 int ClientCount = 0;
@@ -101,9 +101,9 @@ void BroadcastServerMsg(const std::string& message){
 }
 
 int RunRecvThread(ServerInstance& server){
-        if(EnableDebug){printf("[dbg] Recieve thread for server is running. Server connected = %d\n", ServerConnected);}
+        //if(EnableDebug){printf("[dbg] Recieve thread for server is running. Server connected = %d\n", ServerConnected);}
     while(ServerConnected == true){
-        if(EnableDebug){printf("[dbg] INSIDE THE RECV LOOP NOW.\n");}
+        //if(EnableDebug){printf("[dbg] INSIDE THE RECV LOOP NOW.\n");}
         Packet MessagePacket;
 
         std::vector<uint8_t> RecvMsgHdrBuff(5);
@@ -117,7 +117,7 @@ int RunRecvThread(ServerInstance& server){
                                 RecvMsgHdrBuff.size() - RecvBytes, 
                                 0);
             
-            if(EnableDebug){printf("[dbg] Packet should be recieved by now.\n");}
+          
 
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
@@ -205,11 +205,11 @@ int StartServer(){
         NewServer.AcceptClient();
                 if(EnableDebug){printf("[dbg] Server accepted a client.\n");}
         ServerConnected = true;
-                if(EnableDebug){printf("[dbg] Server connected = %d. The recv function should run now.\n", ServerConnected);}
+                
 
-            if(EnableDebug){printf("[dbg] Starting recv thread.\n");}
+            
         std::thread RecvThread(RunRecvThread, std::ref(NewServer));
-            if(EnableDebug){printf("[dbg] Recv thread has started. Returning to main thread.\n");}
+           
 
         BroadcastServerMsg("Accepted a client!\n");
                 if(EnableDebug){printf("[dbg] Broadcast successful.\n");}
@@ -222,7 +222,7 @@ int StartServer(){
            Packet MessagePacket;
            MessagePacket.PL_TYPE = MESSAGE;
            MessagePacket.PL_CTL = NO_ARG;
-                if(EnableDebug){printf("[dbg] Inited the packet for next send session.\n");}
+              
 
             std::getline(std::cin, MessagePacket.PL_BODY);
           
@@ -238,7 +238,7 @@ int StartServer(){
 
             printf("[YOU]: %s\n", MessagePacket.PL_BODY.c_str());
 
-            if(EnableDebug){printf("[dbg] Code reached after printf.\n");}
+            
 
            if (SendFlag < 0){
                 if(EnableDebug){printf("[dbg] Sending buffer failed. Sendflag returned: %d\n", SendFlag);}
