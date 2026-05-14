@@ -90,11 +90,11 @@ int RunRecvThread(ClientInstance& client){
                 ProgramRunning = false;
                 return -1;
             } else if (RecvFlag == 0){
-                    if(EnableDebug){printf("[dbg] Recieve flag returned %d. Terminating connection.\n", RecvFlag);}
-                printf("Connection terminated!\n");
-                TerminateConnection(client);
+                    if(EnableDebug){printf("[dbg] Recieve flag returned %d. Closing connection.\n", RecvFlag);}
+                CloseConnection(client);
                 ProgramRunning = false;
                 ClientConnected = false;
+                return 0;
                 break;
             } 
             
@@ -129,7 +129,9 @@ int RunRecvThread(ClientInstance& client){
                     if(EnableDebug){printf("Recieved command to close the connection.\n");}
                 CloseConnection(client);
                 TerminateConnection(client);
-                break;
+                ClientConnected = false;
+                ProgramRunning = false;
+                return 0;
             }else{
                 RecvBytes += RecvFlag;
             }
@@ -180,12 +182,18 @@ int StartClient(const char* ip, uint16_t port){
 
         std::getline(std::cin, MessagePacket.PL_BODY);
 
+        if(!ProgramRunning || !ClientConnected){
+            break;
+        }
+
         if(MessagePacket.PL_BODY.empty()){
             continue;
         } else if(MessagePacket.PL_BODY == "/~end~/"){
                 if(EnableDebug){printf("Recieved string to close connection.\n");}
             printf("ENDING CONNECTION!\n");
+            RecvThread.join();
             CloseConnection(NewClient);
+            return 0;
             break;
         }
 
@@ -210,7 +218,7 @@ int StartClient(const char* ip, uint16_t port){
            
     }
 
-    TerminateConnection(NewClient);
+    CloseConnection(NewClient);
 
     return 0;
 }

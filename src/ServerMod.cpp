@@ -182,7 +182,7 @@ void StopServer(ServerInstance& server){
     shutdown(CommunicationSocketFd, SHUT_WR);
         if(EnableDebug){printf("[dbg] Called shutdown()\n");}
     close(server.GetFd());
-            if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
+        if(EnableDebug){printf("[dbg] Server connection socket closure successful.\n");}
     printf("[SERVER] Stopped the server.\n");
 }
 
@@ -219,13 +219,10 @@ int StartServer(){
 
         /*MAIN LOOP*/
         while(ProgramRunning){
-            
-           
            Packet MessagePacket;
            MessagePacket.PL_TYPE = MESSAGE;
            MessagePacket.PL_CTL = NO_ARG;
-              
-
+            
             std::getline(std::cin, MessagePacket.PL_BODY);
             if(MessagePacket.PL_BODY == "/~STOP~/"){
                 StopServer(NewServer);
