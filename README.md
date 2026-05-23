@@ -12,7 +12,7 @@ Licensed under NLL-2.0.0: https://github.com/ArtikLamartik/NimLib/blob/main/LICE
 ## Building
 
 ```bash
-g++ ./build.cpp -L. ./nimlib.so -o build && ./build
+g++ ./build.cpp -L. ./nimlib.so -o build && ./build &&
 ```
 
 ---
