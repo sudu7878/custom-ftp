@@ -1,7 +1,7 @@
 (i hate my life)
 
 goal:
-    To make a protocl that sends bytes.
+    To make a protocol that sends bytes.
 
 What i have:
     I have a struct with payload properites such as the std::string which is the main body, the PL_TYPE, the PL_LEN, and the PL_CTL.
