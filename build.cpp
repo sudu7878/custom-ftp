@@ -110,6 +110,7 @@ extern "C" {
     void        stdo       (const char* string1);
     long        strcomp    (const char* string1, const char* string2);
     const char* strformat  (long count, ...);
+    long        strsize    (const char* string1);
     void        syncthr    (void (*function)(void));
     double      timern     (void);
     void        timerstart (const char* name);
@@ -124,6 +125,7 @@ extern "C" {
     const char* tostrint   (long value);
     void        undef      (const char* name);
     void        until      (double timestamp);
+    const char* version    (void);
     void        vidbuf     (long mode);
     void        wait       (long milliseconds);
     const char* where      (const char* command);
