@@ -1,4 +1,4 @@
-#include "NimLib.cpp"
+#include "nimlib.cpp"
 
 int main(void) {
     exec("g++ src/main.cpp -o ftp");
