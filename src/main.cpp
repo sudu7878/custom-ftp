@@ -24,7 +24,6 @@ static pthread_cond_t g_cv = PTHREAD_COND_INITIALIZER;
 static int g_connfd = -1;
 static int g_done = 0;
 
-
 struct Packet {
     uint8_t type;
     uint32_t len;
