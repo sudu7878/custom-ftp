@@ -24,7 +24,6 @@ static pthread_cond_t g_cv = PTHREAD_COND_INITIALIZER;
 static int g_connfd = -1;
 static int g_done = 0;
 
-
 struct Packet { uint8_t type; uint32_t len; char body[MAX_BODY]; uint8_t ctl; };
 
 static int send_packet(int fd, uint8_t type, uint8_t ctl, const char *body) {
