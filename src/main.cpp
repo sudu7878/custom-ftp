@@ -111,7 +111,7 @@ static void *server_send_thread(void *arg) {
                 send_packet(fd, TYPE_BROADCAST, CTL_END, "Server is shutting down.\n");
                 sleep(1); shutdown(fd, SHUT_RDWR); close(fd);
             }
-            stdo("Server stopped.\n"); halt(0);
+            stdo("Server stopped.\n"); halt(0, 0);
         }
         if (line[0] == '\0') { continue; }
         pthread_mutex_lock(&g_mu);
@@ -168,10 +168,10 @@ static void *client_recv_thread(void *arg) {
     (void)arg;
     struct Packet p;
     while (1) {
-        if (recv_packet(g_connfd, &p) < 0) { stdo("[INFO] Server disconnected.\n"); halt(0); }
+        if (recv_packet(g_connfd, &p) < 0) { stdo("[INFO] Server disconnected.\n"); halt(0, 0); }
         if (p.type == TYPE_BROADCAST) { stdo(strformat(2, "[BROADCAST] Server: ", p.body)); }
         else { stdo(strformat(3, "[SERVER]: ", p.body, "\n")); }
-        if (p.ctl == CTL_END) { stdo("[INFO] Server closed the connection.\n"); halt(0); }
+        if (p.ctl == CTL_END) { stdo("[INFO] Server closed the connection.\n"); halt(0, 0); }
     }
     return NULL;
 }
