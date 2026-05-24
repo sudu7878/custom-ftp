@@ -8,7 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "nimlib.cpp"
+#include "../nimlib.cpp"
 
 #define PORT 8000
 #define MAX_BODY 4096
