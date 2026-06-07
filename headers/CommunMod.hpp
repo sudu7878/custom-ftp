@@ -55,9 +55,19 @@ struct TemporaryPacketBody{
 
 
 enum PacketType{
-    MESSAGE = 000,
-    FILE_TRANSFER = 100,
-    MESSAGE_BROADCAST = 101
+    MESSAGE = 100,
+    MESSAGE_BROADCAST = 002,
+
+    FILE_TRANSFER = 200,
+    FILE_BEGIN = 003,
+    FILE_CHUNK = 004,
+    FILE_END = 005
+};
+
+enum Flags{
+    FILE_SUCC = 006,
+    FILE_FAIL = 007,
+    CANCEL_TRANS = 012
 };
 
 enum ControlType{

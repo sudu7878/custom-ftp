@@ -69,11 +69,14 @@ void CloseConnection(ClientInstance& client){
 int RunRecvThread(ClientInstance& client){
     while(ClientConnected){
 
+
+    /*LOGIC FOR RECIEVING PACKET*/    
         Packet MessagePacket;
 
         std::vector<uint8_t> RecvMsgHdrBuff(5);
         TemporaryPacketHeader HeaderPacket;
 
+        /*to recieve header packet*/
         int RecvBytes = 0;
         while (RecvBytes < RecvMsgHdrBuff.size()) {
             /*handling pointer arithmetic to prevent over-writing*/
@@ -103,6 +106,7 @@ int RunRecvThread(ClientInstance& client){
             }
         }
         
+        /*to recieve body packet based on header packet attributes*/
         RecvBytes = 0; /*reset*/
         HeaderPacket = DeserializeHeaderPacket(RecvMsgHdrBuff);
 
@@ -139,7 +143,10 @@ int RunRecvThread(ClientInstance& client){
         RecvBytes = 0;
         BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
 
-        MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
+        /*Combining the header + body packet to form message packet*/
+        MessagePacket = CombinePacket(HeaderPacket, BodyPacket);    //recieving complete
+
+    /*PACKET PASRSING LOGIC*/
 
         if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
             printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
@@ -163,8 +170,10 @@ int RunRecvThread(ClientInstance& client){
 //CLIENT LOOP
 
 int StartClient(const char* ip, uint16_t port){
-    printf("Attempting to connect server at %s:%d\n", ip, port);
-        
+    if (EnableDebug){printf("Attempting to connect server at %s:%d\n", ip, port);};
+    
+    /*INITIALIZE CLIENT*/
+
     ClientInstance NewClient;
     NewClient.CreateSocketFd();
         if(EnableDebug){printf("[dbg] Client socket creation successful. Socket FD: %d\n", NewClient.GetFd());}
@@ -173,6 +182,7 @@ int StartClient(const char* ip, uint16_t port){
 
     std::thread RecvThread(RunRecvThread, std::ref(NewClient));
 
+    /*START MAIN PROGRAM LOOP*/
     while(ProgramRunning){
         
         Packet MessagePacket;
@@ -196,6 +206,8 @@ int StartClient(const char* ip, uint16_t port){
             return 0;
             break;
         }
+
+        /*SENDING PACKET LOGIC*/
 
         std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
             //if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}

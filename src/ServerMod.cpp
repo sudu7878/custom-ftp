@@ -105,8 +105,12 @@ int RunRecvThread(ServerInstance& server){
         //if(EnableDebug){printf("[dbg] Recieve thread for server is running. Server connected = %d\n", ServerConnected);}
     while(ServerConnected == true){
         //if(EnableDebug){printf("[dbg] INSIDE THE RECV LOOP NOW.\n");}
+
+        /*LOGIC FOR RECIEVING PACKET*/    
+
         Packet MessagePacket;
 
+         /*to recieve header packet*/
         std::vector<uint8_t> RecvMsgHdrBuff(5);
         TemporaryPacketHeader HeaderPacket;
 
@@ -129,6 +133,8 @@ int RunRecvThread(ServerInstance& server){
             }
         }
         
+         /*to recieve body packet based on the header packet*/
+
         RecvBytes = 0; /*reset*/
         HeaderPacket = DeserializeHeaderPacket(RecvMsgHdrBuff);
         //if(EnableDebug){printf("[dbg] Header Type: %d | Header Len: %u\n", HeaderPacket.type, HeaderPacket.len);}
@@ -148,19 +154,22 @@ int RunRecvThread(ServerInstance& server){
             if(RecvFlag < 0){
                     if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
                 perror("[ERROR] Receiving packet failed\n");
-                
                 break;
-                //TODO: Add a logic for clients leaving when RecvFlag = 0
             } else {
                 RecvBytes += RecvFlag;
             }
         }
         RecvBytes = 0;
+
         BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
 
-
+        /*Combining packet based on the Header and the Body packet*/
+    
         MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
-         printf("[CLIENT]: %s\n", MessagePacket.PL_BODY.data());
+
+        printf("[CLIENT]: %s\n", MessagePacket.PL_BODY.data());
+
+        /*PARSING LOGIC*/
         if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
             printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
         }
@@ -194,6 +203,8 @@ void LockDoor(ServerInstance& server){
 //SERVER LOOP
 
 int StartServer(){
+
+    /*INITIALIZE SERVER*/
     ServerInstance NewServer;
         NewServer.CreateSocketFd();
             if(EnableDebug){printf("[dbg] Server socket creation successful. Socket FD: %d\n", NewServer.GetFd());}
@@ -228,6 +239,8 @@ int StartServer(){
                 StopServer(NewServer);
                 if(EnableDebug){printf("Recieved string to stop the server.\n");}
             }
+
+            /*SENDING PACKET LOGIC*/
           
            std::vector<uint8_t> MessageBuffer = SerializePacket(MessagePacket);
                 if(EnableDebug){printf("[dbg] Made the packet ready for sending... calling send() now.\n");}
