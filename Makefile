@@ -4,7 +4,7 @@ BUILD = builds/TestBuilds
 
 	
 all:
-	g++ -Iheaders src/CommunMod.cpp src/api.cpp src/ClientMod.cpp src/ServerMod.cpp src/UserHandler.cpp -o ftp
+	g++ -Iheaders src/CommunMod.cpp src/api.cpp src/ClientMod.cpp src/ServerMod.cpp src/UserHandler.cpp -o ftp -L. nimlib.so
 
 
 	
