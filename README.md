@@ -11,8 +11,9 @@ Licensed under NLL-2.0.0: https://github.com/ArtikLamartik/NimLib/blob/main/LICE
 
 ## Building
 
+Just run the makefile.
 ```bash
-g++ -Iheaders ./build.cpp -L. ./nimlib.so -o build && ./build && rm ./build
+make all
 ```
 
 ---

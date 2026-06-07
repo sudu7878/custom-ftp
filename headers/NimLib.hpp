@@ -1,3 +1,9 @@
+/*
+NimLib, Copyright (c) 2026 ArtikLamartik.
+Licensed under NLL-2.0.0: https://github.com/ArtikLamartik/NimLib/blob/main/LICENSE
+*/
+
+
 struct Exec {
     const char* output;
     long        exit_code;
