@@ -143,7 +143,7 @@ int RunRecvThread(ClientInstance& client){
 //CLIENT LOOP
 
 int StartClient(const char* ip, uint16_t port){
-    if (EnableDebug){printf("Attempting to connect server at %s:%d\n", ip, port);};
+    if (EnableDebug){printf("[dbg] Attempting to connect server at %s:%d\n", ip, port);};
     
     /*INITIALIZE CLIENT*/
 
@@ -172,7 +172,7 @@ int StartClient(const char* ip, uint16_t port){
         if(MessagePacket.PL_BODY.empty()){
             continue;
         } else if(MessagePacket.PL_BODY == "/~end~/"){
-                if(EnableDebug){printf("Recieved string to close connection.\n");}
+                if(EnableDebug){printf("[dbg] Recieved string to close connection.\n");}
             printf("ENDING CONNECTION!\n");
             RecvThread.join();
             CloseConnection(NewClient);
@@ -188,7 +188,7 @@ int StartClient(const char* ip, uint16_t port){
         int SendFlag = SendPacket(MessageBuffer, NewClient.GetFd());
         
         if(SendFlag == 0){
-                if(EnableDebug){printf("The packet send was successful.\n");}
+                if(EnableDebug){printf(" [dbg] The packet send was successful.\n");}
         } else if (SendFlag < 0){
             printf("Sending packet failed. Terminating the cinnection\n");
             break;

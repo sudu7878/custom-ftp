@@ -221,7 +221,7 @@ int StartServer(){
             std::getline(std::cin, MessagePacket.PL_BODY);
             if(MessagePacket.PL_BODY == "/~STOP~/"){
                 StopServer(NewServer);
-                if(EnableDebug){printf("Recieved string to stop the server.\n");}
+                if(EnableDebug){printf("[dbg] Recieved string to stop the server.\n");}
             }
 
             /*SENDING PACKET LOGIC*/

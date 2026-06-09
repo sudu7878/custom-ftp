@@ -74,10 +74,10 @@ BaseConnectionInstance::BaseConnectionInstance(){
 bool BaseConnectionInstance::CreateSocketFd(){
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0){
-        perror("Socket creation error");
+        perror("[ERROR] Socket creation failed");
         return false;
     }
-    if(EnableDebug){printf("Socket creation successful.\n");}
+    if(EnableDebug){printf("[dbg] Socket creation successful.\n");}
     return true;
 }
 
@@ -88,7 +88,7 @@ int BaseConnectionInstance::GetFd(){
 BaseConnectionInstance::~BaseConnectionInstance() noexcept{
     if (sockfd >= 0){
         close(sockfd);
-        if(EnableDebug){printf("The socket is now closed.\n");}
+        if(EnableDebug){printf("[dbg] The socket is now closed.\n");}
     }
     close(sockfd);
 }
@@ -130,7 +130,7 @@ int SendPacket(std::vector<uint8_t> &msgbuff, int fd){
                       0);
 
     if (SendFlag <= 0){
-            if(EnableDebug){printf("Sending buffer failed.\n");}
+            if(EnableDebug){printf("[dbg] Sending buffer failed.\n");}
         perror("[ERROR] Packet send error");
         return -1;
     } 
