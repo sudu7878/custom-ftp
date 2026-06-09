@@ -109,6 +109,7 @@ int RecievePacket(std::vector<uint8_t> &buffer, int fd){
         } else if (RecvFlag == 0){
             if(EnableDebug){printf("[dbg] Recieve flag returned %d.", RecvFlag);}
             return 2;
+        
         } 
         else {
             RecvBytes += RecvFlag;

@@ -5,7 +5,6 @@
 #ifndef API_MODULE_HPP
 #define API_MODULE_HPP
 
-#include "CommunMod.hpp"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -16,6 +15,7 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <vector>
 
 #include <ifaddrs.h>
 

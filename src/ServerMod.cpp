@@ -114,28 +114,20 @@ int RunRecvThread(ServerInstance& server){
         std::vector<uint8_t> RecvMsgHdrBuff(5);
         TemporaryPacketHeader HeaderPacket;
 
-        int RecvBytes = 0;
-        while (RecvBytes < RecvMsgHdrBuff.size()) {
-            /*handling pointer arithmetic to prevent over-writing*/
-            int RecvFlag = recv(CommunicationSocketFd, 
-                                RecvMsgHdrBuff.data() + RecvBytes,
-                                RecvMsgHdrBuff.size() - RecvBytes, 
-                                0);
-            
-            if(RecvFlag < 0){
-                    if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("[ERROR] Receiving packet failed");
-                return -1;
-            } else if(RecvFlag == 0){
-                ClientCount--;
-            } else{
-                RecvBytes += RecvFlag;
-            }
+        int RecieveStatusHdr = RecievePacket(RecvMsgHdrBuff, CommunicationSocketFd);
+        if (RecieveStatusHdr == 2){
+            ClientCount--;
+            ServerConnected = false;
+            break;
+        } else if(RecieveStatusHdr < 0){
+                if(EnableDebug){printf("[dbg] Reading incoming buffer failed.\n");}
+            perror("[ERROR] Receiving packet failed");
+            return -1;
         }
         
          /*to recieve body packet based on the header packet*/
 
-        RecvBytes = 0; /*reset*/
+        
         HeaderPacket = DeserializeHeaderPacket(RecvMsgHdrBuff);
         //if(EnableDebug){printf("[dbg] Header Type: %d | Header Len: %u\n", HeaderPacket.type, HeaderPacket.len);}
 
@@ -145,21 +137,16 @@ int RunRecvThread(ServerInstance& server){
 
         std::vector<uint8_t> RecvMsgBodyBuff(BytesToRecieve);
 
-        while (RecvBytes < BytesToRecieve) {
-            int RecvFlag = recv(CommunicationSocketFd, 
-                                RecvMsgBodyBuff.data() + RecvBytes, 
-                                BytesToRecieve - RecvBytes, 
-                                0);
-
-            if(RecvFlag < 0){
-                    if(EnableDebug){printf("[dbg] Reading incoming buffer failed. Recvflag returned: %d\n", RecvFlag);}
-                perror("[ERROR] Receiving packet failed\n");
-                break;
-            } else {
-                RecvBytes += RecvFlag;
-            }
+        int RecieveStatusBdy = RecievePacket(RecvMsgBodyBuff, CommunicationSocketFd);
+        if (RecieveStatusBdy == 2){
+                if(EnableDebug){printf("[dbg] Decrementing client.\n");}
+            ClientCount--;
+            ServerConnected = false;
+            break;
+        } else if(RecieveStatusBdy < 0){
+            perror("[ERROR] Receiving packet failed\n");
+            break;
         }
-        RecvBytes = 0;
 
         BodyPacket = DeserializeBodyPacket(RecvMsgBodyBuff, HeaderPacket);
 

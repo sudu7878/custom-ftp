@@ -101,12 +101,13 @@ int RunRecvThread(ClientInstance& client){
 
         int RecieveStatusBdy = RecievePacket(RecvMsgBodyBuff, client.GetFd());
         if (RecieveStatusBdy == 2){
-            if(EnableDebug){printf("[dbg] Closing connection.\n");}
+                if(EnableDebug){printf("[dbg] Closing connection.\n");}
             CloseConnection(client);
             ProgramRunning = false;
             ClientConnected = false;
             break;
         } else if(RecieveStatusBdy < 0){
+                if(EnableDebug){printf("[dbg] Receiving packet failed.\n");}
             printf("Terminating connection.\n");
             TerminateConnection(client);
             ProgramRunning = false;
