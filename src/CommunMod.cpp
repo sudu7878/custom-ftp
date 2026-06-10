@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <string>
 #include <vector>
 #include <cstring>
 #include <arpa/inet.h>
