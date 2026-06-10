@@ -41,8 +41,8 @@ std::vector<uint8_t> SerializePacket(Packet &data){
     data.PL_LEN = data.PL_BODY.size();  /*size of the str*/
     WritePacketBuffer(PacketBuff, htonl(data.PL_LEN));
 
-    for(char StringChars : data.PL_BODY){
-        PacketBuff.push_back((uint8_t)StringChars);
+    for(uint8_t byte : data.PL_BODY){
+        PacketBuff.push_back(byte);
     }
 
     PacketBuff.push_back(data.PL_CTL);
@@ -69,7 +69,7 @@ TemporaryPacketBody DeserializeBodyPacket(const std::vector<uint8_t> &buff, Temp
     size_t index = 0;
     
     for(size_t i = 0; i < hdr.len; i++){
-        RecievedBodyPacket.body += (char)buff[index];
+        RecievedBodyPacket.body.push_back(buff[index]);
         index++;
     }
 

@@ -39,7 +39,7 @@
 struct Packet{
     uint8_t PL_TYPE;                    /*1 BYTE*/
     uint32_t PL_LEN;                    /*4 BYTE*/
-    std::string PL_BODY;                /*dynamic*/
+    std::vector<uint8_t> PL_BODY;       /*dynamic*/
     uint8_t PL_CTL;                     /*1 BYTE*/
 };
 
@@ -49,7 +49,7 @@ struct TemporaryPacketHeader{
     uint32_t len;
 };
 struct TemporaryPacketBody{
-    std::string body;
+    std::vector<uint8_t> body;
     uint8_t ctl;
 };
 

@@ -84,7 +84,7 @@ int ServerInstance::AcceptClient(){
 void BroadcastServerMsg(const std::string& message){
     Packet BroadcastPacket;
 
-    BroadcastPacket.PL_BODY = message;
+    BroadcastPacket.PL_BODY.assign(message.begin(), message.end());
     BroadcastPacket.PL_TYPE = MESSAGE_BROADCAST;
     
     std::vector<uint8_t> BroadcastBuffer = SerializePacket(BroadcastPacket);
@@ -151,11 +151,14 @@ int RunRecvThread(ServerInstance& server){
     
         MessagePacket = CombinePacket(HeaderPacket, BodyPacket);
 
-        printf("[CLIENT]: %s\n", MessagePacket.PL_BODY.data());
+        //CONVERT BINARY TO ASCII
+        std::string ReceivedText(MessagePacket.PL_BODY.begin(), MessagePacket.PL_BODY.end());
+
+        printf("[CLIENT]: %s\n", ReceivedText.c_str());
 
         /*PARSING LOGIC*/
         if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
-            printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
+            printf("[BROADCAST] Server: %s", ReceivedText.c_str());
         }
 
         switch (MessagePacket.PL_CTL) {
@@ -217,9 +220,13 @@ int StartServer(){
            Packet MessagePacket;
            MessagePacket.PL_TYPE = MESSAGE;
            MessagePacket.PL_CTL = NO_ARG;
+
+           std::string InputText;
             
-            std::getline(std::cin, MessagePacket.PL_BODY);
-            if(MessagePacket.PL_BODY == "/~STOP~/"){
+            std::getline(std::cin, InputText);
+            MessagePacket.PL_BODY.assign(InputText.begin(), InputText.end());
+
+            if(InputText== "/~STOP~/"){
                 StopServer(NewServer);
                 if(EnableDebug){printf("[dbg] Recieved string to stop the server.\n");}
             }
@@ -238,7 +245,7 @@ int StartServer(){
                     break;
             }
 
-            printf("[YOU]: %s\n", MessagePacket.PL_BODY.c_str());
+            printf("[YOU]: %s\n", InputText.c_str());
            
         }
 

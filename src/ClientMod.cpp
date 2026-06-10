@@ -8,6 +8,7 @@
 
 
 #include <functional>
+#include <string>
 #include<thread>
 #include <cstddef>
 #include <cstdint>
@@ -121,8 +122,11 @@ int RunRecvThread(ClientInstance& client){
 
     /*PACKET PASRSING LOGIC*/
 
+        //CONVERT BINARY TO ASCII
+        std::string ReceivedText(MessagePacket.PL_BODY.begin(), MessagePacket.PL_BODY.end());
+
         if (MessagePacket.PL_TYPE == MESSAGE_BROADCAST){
-            printf("[BROADCAST] Server: %s", MessagePacket.PL_BODY.data());
+            printf("[BROADCAST] Server: %s", ReceivedText.c_str());
         }
 
         switch (MessagePacket.PL_CTL) {
@@ -133,8 +137,10 @@ int RunRecvThread(ClientInstance& client){
                 ClientConnected = false;
                 break;
         }
+
         
-        printf("[SERVER]: %s\n", MessagePacket.PL_BODY.data());
+        
+        printf("[SERVER]: %s\n", ReceivedText.c_str());
         
     }   
     return 0;
@@ -163,7 +169,10 @@ int StartClient(const char* ip, uint16_t port){
         MessagePacket.PL_TYPE = MESSAGE;
         MessagePacket.PL_CTL = NO_ARG;
 
-        std::getline(std::cin, MessagePacket.PL_BODY);
+        std::string InputText;
+
+        std::getline(std::cin, InputText);
+        MessagePacket.PL_BODY.assign(InputText.begin(), InputText.end());
 
         if(!ProgramRunning || !ClientConnected){
             break;
@@ -171,7 +180,7 @@ int StartClient(const char* ip, uint16_t port){
 
         if(MessagePacket.PL_BODY.empty()){
             continue;
-        } else if(MessagePacket.PL_BODY == "/~end~/"){
+        } else if(InputText == "/~end~/"){
                 if(EnableDebug){printf("[dbg] Recieved string to close connection.\n");}
             printf("ENDING CONNECTION!\n");
             RecvThread.join();
@@ -194,7 +203,7 @@ int StartClient(const char* ip, uint16_t port){
             break;
         };
         
-        printf("[YOU]: %s\n", MessagePacket.PL_BODY.c_str());
+        printf("[YOU]: %s\n", InputText.c_str());
            
     }
 
