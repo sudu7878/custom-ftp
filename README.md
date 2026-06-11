@@ -1,4 +1,4 @@
-WireSend
+<h1>WireSend</h1>
 
 > ⚠️ **Work in progress** — currently has a lot of known bugs. Chat support is fairly functional; more features coming soon.
 
